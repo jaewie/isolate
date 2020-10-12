@@ -24,6 +24,9 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <seccomp.h>
+#include <fcntl.h>
 
 /* May not be defined in older glibc headers */
 #ifndef MS_PRIVATE
@@ -588,6 +591,14 @@ setup_root(void)
 
   if (chdir("root/box") < 0)
     die("Cannot change current directory: %m");
+
+  scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+  if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(socket), 0) != 0) {
+    die("Adding socket seccomp failed");
+  }
+  if (seccomp_load(ctx) != 0) {
+    die("Loading seccomp failed");
+  }
 }
 
 static void
